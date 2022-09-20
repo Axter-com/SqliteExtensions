@@ -40,14 +40,6 @@ namespace SQLiteExtensions
 
     using System.Diagnostics;
 
-    public static class Sqlite
-    {
-        static public SQLiteConnection CreateConnection(string connectionString)
-        {
-            return new SQLiteConnection(connectionString);
-        }
-    }
-
     /// Extension methods for SQLite connections (SQLiteConnection).
     ///Copy table data
     ///  Options:
@@ -62,10 +54,11 @@ namespace SQLiteExtensions
     ///     Example #1:
     ///         sqliteconnectionSrcDb.CopyTable(sqliteconnectionDestinationDb, "myTableName");
     ///     Example #2:
-    ///         SqliteConnectionExtensions.CopyTable(sqliteconnectionSrcDb, sqliteconnectionDestinationDb, "myTableName");
+    ///         SqliteExt.CopyTable(sqliteconnectionSrcDb, sqliteconnectionDestinationDb, "myTableName");
     /// </usage>
-    public static class SqliteConnectionExtensions // Public API's
+    public static class SqliteExt
     {
+        static public SQLiteConnection CreateConnection(string connectionString) => new SQLiteConnection(connectionString);
         /// <summary>
         /// Create table and insert table data from one DB (connection) to another.
         /// The table name is the same in source and destination DB (connection).
@@ -132,7 +125,7 @@ namespace SQLiteExtensions
         /// <param name="deleteDestinationTableFirst">If true, deletes destination table content before executing insert.</param>
         static public bool CopyTable(this SQLiteConnection sourceConnection, string sourceTableName, string destinationTableName = null, SQLiteConnection destinationConnection = null, string SqlInsertCmd = "INSERT", bool deleteDestinationTableFirst = false, bool createTableFirst = false, bool TransactionMode = true) => CopyTableImpl(sourceConnection, sourceTableName, destinationTableName, destinationConnection, SqlInsertCmd, deleteDestinationTableFirst, createTableFirst, TransactionMode);
 
-#region SqliteConnectionExtensions Private methods
+#region SqliteExt Private methods
         static private bool CopyTableImpl(this SQLiteConnection sourceConnection, string sourceTableName, string destinationTableName = null, SQLiteConnection destinationConnection = null, string SqlInsertCmd = "INSERT", bool deleteDestinationTableFirst = false, bool createTableFirst = false, bool TransactionMode = true)
         {
             destinationTableName ??= sourceTableName;
@@ -194,21 +187,6 @@ namespace SQLiteExtensions
                 transaction.Commit();
             return true;
         }
-#endregion SqliteConnectionExtensions Private methods
+#endregion SqliteExt Private methods
     }
-
-#if !MICROSOFT_DATA_SQLITE
-    public class SqliteException : Exception
-    {
-        /// <summary>
-        ///     Initializes a new instance of the <see cref="SqliteException" /> class.
-        /// </summary>
-        /// <param name="message">The message to display for the exception. Can be null.</param>
-        /// <param name="errorCode">The SQLite error code.</param>
-        public SqliteException(string message, int errorCode = 0)
-            : base($"{message}; SQL-Error:{errorCode}")
-        {
-        }
-    }
-#endif // !MICROSOFT_DATA_SQLITE
 }
