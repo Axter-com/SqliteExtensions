@@ -26,6 +26,9 @@
  * </summary>
 */
 
+// To use Microsoft.Data.Sqlite, uncomment the next line.
+// #define MICROSOFT_DATA_SQLITE
+
 namespace SQLiteExtensions
 {
 #if MICROSOFT_DATA_SQLITE
@@ -52,13 +55,54 @@ namespace SQLiteExtensions
     ///      Create destination table schema
     /// <usage>
     ///     Example #1:
-    ///         sqliteconnectionSrcDb.CopyTable(sqliteconnectionDestinationDb, "myTableName");
+    ///         sqliteConnection_SrcDb.CopyTable(sqliteConnection_DestinationDb, "myTableName");
     ///     Example #2:
-    ///         SqliteExt.CopyTable(sqliteconnectionSrcDb, sqliteconnectionDestinationDb, "myTableName");
+    ///         SqliteExt.CopyTable(sqliteConnection_SrcDb, sqliteConnection_DestinationDb, "myTableName");
     /// </usage>
     public static class SqliteExt
     {
-        static public SQLiteConnection CreateConnection(string connectionString) => new SQLiteConnection(connectionString);
+        static public SQLiteConnection CreateConnection(string connectionString)
+        {
+            var conn = new SQLiteConnection(connectionString);
+            conn.Open();
+            return conn;
+        }
+        static public SQLiteCommand CreateCommand(this SQLiteConnection conn, string cmd = "")
+        {
+            return conn.CreateCommand(cmd);
+        }
+        static public SQLiteDataReader CreateReader(this SQLiteConnection conn, string cmd)
+        {
+            SQLiteCommand sqliteCommand = conn.CreateCommand(cmd);
+            return sqliteCommand.ExecuteReader();
+        }
+        static public SQLiteDataReader CreateReader(this SQLiteCommand sqliteCommand, string cmd)
+        {
+            sqliteCommand.CommandText = cmd;
+            return sqliteCommand.ExecuteReader();
+        }
+        static public int Insert(this SQLiteConnection conn, string InsertQueryCmd) => Execute(conn, InsertQueryCmd);
+        /// <summary>
+        /// Execute Non-Query. Example: Insert, Insert or Replace, Drop, Create, etc...
+        /// </summary>
+        /// <param name="conn">SQL DB connection</param>
+        /// <param name="NonQueryCmd">SQL Non-Query (Insert, Insert or Replace, Drop, Create)</param>
+        static public int Execute(this SQLiteConnection conn, string NonQueryCmd)
+        {
+            SQLiteCommand sqliteCommand = conn.CreateCommand(NonQueryCmd);
+            return sqliteCommand.ExecuteNonQuery();
+        }
+        static public int Insert(this SQLiteCommand sqliteCommand, string InsertQueryCmd) => Execute(sqliteCommand, InsertQueryCmd);
+        /// <summary>
+        /// Execute Non-Query. Example: Insert, Insert or Replace, Drop, Create, etc... 
+        /// </summary>
+        /// <param name="sqliteCommand">SQL DB connection</param>
+        /// <param name="NonQueryCmd">SQL Non-Query (Insert, Insert or Replace, Drop, Create)</param>
+        static public int Execute(this SQLiteCommand sqliteCommand, string NonQueryCmd)
+        {
+            sqliteCommand.CommandText = NonQueryCmd;
+            return sqliteCommand.ExecuteNonQuery();
+        }
         /// <summary>
         /// Create table and insert table data from one DB (connection) to another.
         /// The table name is the same in source and destination DB (connection).
