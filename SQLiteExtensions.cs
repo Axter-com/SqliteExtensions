@@ -7,22 +7,39 @@
  * <summary>
  *      SQLiteExtensions extends either of the following packages:
  *          System.Data.SQLite package. (https://system.data.sqlite.org/index.html/doc/trunk/www/index.wiki)
- *          Microsoft.Data.Sqlite package. (https://docs.microsoft.com/en-us/dotnet/standard/data/sqlite) 
+ *          Microsoft.Data.Sqlite package. (https://docs.microsoft.com/en-us/dotnet/standard/data/sqlite)
+ *      It adds the following:
+ *          1. Adds copy table functions.
+ *          2. Adds wrapper functions using common SQL terms.
+ *          3. Adds ability to use either SQLite packages without having to include package details in source code.
+ *              a) Package details only have to be defined in this file.
+ *              b) Usage code only needs using statement for SQLiteExtensions.
+ *                  using SQLiteExtensions;
+ *              c) Use "var" variable types and the Create??? API's to avoid using package variable types details in source code.
+ *                  Examples:
+ *                          using ( var connection = SqliteExt.CreateConnection($"Data Source={AppDbUpdate};Mode=ReadWriteCreate") )
+ *                          {
+ *                              var transaction = connection.BeginTransaction();
+ *                              var command = connection.CreateCommand();
+ *                              var reader = command.CreateReader("SELECT name FROM sqlite_master WHERE type='table' AND name='Languages';");
+ *                          }
  * Setup Instructions:
  *     To add System.Data.SQLite or Microsoft.Data.Sqlite package to a VS .Net project, 
  *     open DOS command prompt, and change to the directory containing the project (*.csproj) file. 
- *     Enter ONE of the following command:  
+ *     Enter ONLY ONE of the following command:  
  *          dotnet add package System.Data.SQLite
  *          dotnet add package Microsoft.Data.Sqlite
  *     
  *     FYI: The fully qualified path for dotnet is usually the following: C:\Program Files\dotnet\dotnet.exe 
  *     
- *     By default, SQLiteExtensions supports System.Data.SQLite. To use it with Microsoft.Data.Sqlite, add a define MICROSOFT_DATA_SQLITE
+ *     By default, SQLiteExtensions supports System.Data.SQLite. To use Microsoft.Data.Sqlite, add a define MICROSOFT_DATA_SQLITE
  *          #define MICROSOFT_DATA_SQLITE
  *  Usage:
- *     An instance of SQLiteConnection is required to use the SQLiteExtensions API's.
+ *     An instance of SQLiteConnection or SQLiteCommand is required to use most of the SQLiteExtensions API's.
  *     Example Syntax:
  *         conn.InsertTable(conn_dest, "myTableName"); // Where conn is of type SQLiteConnection
+ *         int results = command.Execute($"INSERT INTO VersionInfo (Name, VerInfo) VALUES ('{version.Key}', '{version.Value}')"); // Where command is of type SQLiteCommand
+ *         var reader = command.CreateReader("SELECT name FROM sqlite_master WHERE type='table' AND name='Languages';");
  * </summary>
 */
 
@@ -43,7 +60,7 @@ namespace SQLiteExtensions
 
     using System.Diagnostics;
 
-    /// Extension methods for SQLite connections (SQLiteConnection).
+    /// Extension methods for SQLite. (SQLiteConnection and SQLiteCommand)
     ///Copy table data
     ///  Options:
     ///      Copy between DB (connections)
@@ -76,10 +93,6 @@ namespace SQLiteExtensions
         }
         static public SQLiteCommand CreateCommand(this SQLiteConnection conn, string cmd = "") => conn.CreateCommand(cmd);
         static public SQLiteDataReader CreateReader(this SQLiteConnection conn, string cmd)=> conn.CreateCommand(cmd).ExecuteReader();
-        //{
-        //    SQLiteCommand sqliteCommand = conn.CreateCommand(cmd);
-        //    return sqliteCommand.ExecuteReader();
-        //}
         static public SQLiteDataReader CreateReader(this SQLiteCommand sqliteCommand, string cmd)
         {
             sqliteCommand.CommandText = cmd;
@@ -187,7 +200,7 @@ namespace SQLiteExtensions
             {
                 if ( deleteDestinationTableFirst )
                 {
-                    results = toDbCommand.Execute($"DROP TABLE if EXISTS '{destinationTableName}';);
+                    results = toDbCommand.Execute($"DROP TABLE if EXISTS '{destinationTableName}';");
                 }
                 SQLiteDataReader ? readSchema = fromDbCommand.CreateReader($"SELECT sql FROM sqlite_master WHERE type='table' AND name='{destinationTableName}';");
                 if ( readSchema.Read() )
