@@ -37,7 +37,7 @@ namespace SQLiteExtensions
     using SQLiteTransaction = Microsoft.Data.Sqlite.SqliteTransaction;
     using SQLiteCommand = Microsoft.Data.Sqlite.SqliteCommand;
     using SQLiteDataReader = Microsoft.Data.Sqlite.SqliteDataReader;
-#else //SYSTEM_DATA_SQLITE_
+#else //SYSTEM_DATA_SQLITE
     using System.Data.SQLite;
 #endif
 
@@ -61,27 +61,30 @@ namespace SQLiteExtensions
     /// </usage>
     public static class SqliteExt
     {
-        static public SQLiteConnection CreateConnection(string connectionString)
+        // API's using common SQL terms
+        static public int Insert(this SQLiteConnection conn, string InsertQueryCmd) => Execute(conn, InsertQueryCmd);
+        static public int Insert(this SQLiteCommand sqliteCommand, string InsertQueryCmd) => Execute(sqliteCommand, InsertQueryCmd);
+        static public int DropTable(this SQLiteCommand sqliteCommand, string TableName)=>sqliteCommand.Execute($"DROP TABLE if EXISTS '{TableName}';");
+        static public int DeleteFrom(this SQLiteCommand sqliteCommand, string TableName)=> sqliteCommand.Execute($"DELETE from {TableName}");
+
+        // API's to create SQLiteConnection, SQLiteCommand, and SQLiteDataReader
+        static public SQLiteConnection CreateConnection(string connectionString)  // This is the only API which requires SqliteExt to be used.  Example:  SqliteExt.CreateConnection(@"Data Source=C:\mydatabase.db;Mode=ReadOnly")
         {
             var conn = new SQLiteConnection(connectionString);
             conn.Open();
             return conn;
         }
-        static public SQLiteCommand CreateCommand(this SQLiteConnection conn, string cmd = "")
-        {
-            return conn.CreateCommand(cmd);
-        }
-        static public SQLiteDataReader CreateReader(this SQLiteConnection conn, string cmd)
-        {
-            SQLiteCommand sqliteCommand = conn.CreateCommand(cmd);
-            return sqliteCommand.ExecuteReader();
-        }
+        static public SQLiteCommand CreateCommand(this SQLiteConnection conn, string cmd = "") => conn.CreateCommand(cmd);
+        static public SQLiteDataReader CreateReader(this SQLiteConnection conn, string cmd)=> conn.CreateCommand(cmd).ExecuteReader();
+        //{
+        //    SQLiteCommand sqliteCommand = conn.CreateCommand(cmd);
+        //    return sqliteCommand.ExecuteReader();
+        //}
         static public SQLiteDataReader CreateReader(this SQLiteCommand sqliteCommand, string cmd)
         {
             sqliteCommand.CommandText = cmd;
             return sqliteCommand.ExecuteReader();
         }
-        static public int Insert(this SQLiteConnection conn, string InsertQueryCmd) => Execute(conn, InsertQueryCmd);
         /// <summary>
         /// Execute Non-Query. Example: Insert, Insert or Replace, Drop, Create, etc...
         /// </summary>
@@ -92,7 +95,6 @@ namespace SQLiteExtensions
             SQLiteCommand sqliteCommand = conn.CreateCommand(NonQueryCmd);
             return sqliteCommand.ExecuteNonQuery();
         }
-        static public int Insert(this SQLiteCommand sqliteCommand, string InsertQueryCmd) => Execute(sqliteCommand, InsertQueryCmd);
         /// <summary>
         /// Execute Non-Query. Example: Insert, Insert or Replace, Drop, Create, etc... 
         /// </summary>
@@ -185,26 +187,21 @@ namespace SQLiteExtensions
             {
                 if ( deleteDestinationTableFirst )
                 {
-                    toDbCommand.CommandText = $"DROP TABLE if EXISTS '{destinationTableName}';";
-                    results = toDbCommand.ExecuteNonQuery();
+                    results = toDbCommand.Execute($"DROP TABLE if EXISTS '{destinationTableName}';);
                 }
-                fromDbCommand.CommandText = $"SELECT sql FROM sqlite_master WHERE type='table' AND name='{destinationTableName}';";
-                SQLiteDataReader ? readSchema = fromDbCommand.ExecuteReader();
+                SQLiteDataReader ? readSchema = fromDbCommand.CreateReader($"SELECT sql FROM sqlite_master WHERE type='table' AND name='{destinationTableName}';");
                 if ( readSchema.Read() )
                 {
                     string createTableSchema = readSchema.GetString(0);
-                    toDbCommand.CommandText = createTableSchema.Replace($"CREATE TABLE \"{sourceTableName}\"", $"CREATE  TABLE \"{destinationTableName}\" ");
-                    results = toDbCommand.ExecuteNonQuery();
+                    results = toDbCommand.Execute(createTableSchema.Replace($"CREATE TABLE \"{sourceTableName}\"", $"CREATE  TABLE \"{destinationTableName}\" "));
                 }
                 readSchema.Close();
             }
             else if ( deleteDestinationTableFirst )
             {
-                toDbCommand.CommandText = $"delete from {destinationTableName}";
-                toDbCommand.ExecuteNonQuery();
+                toDbCommand.Execute($"delete from {destinationTableName}");
             }
-            fromDbCommand.CommandText = $"SELECT * FROM {sourceTableName};";
-            SQLiteDataReader ? sourceReader = fromDbCommand.ExecuteReader();
+            SQLiteDataReader ? sourceReader = fromDbCommand.CreateReader($"SELECT * FROM {sourceTableName};");
             string Columns = "";
             while ( sourceReader.Read() )
             {
@@ -222,8 +219,7 @@ namespace SQLiteExtensions
                     Values += $"'{sourceReader.GetString(i)}',";
                 }
                 Values = Values.TrimEnd(',');
-                toDbCommand.CommandText = $"{SqlInsertCmd} INTO {destinationTableName} ({Columns}) VALUES({Values});";
-                results = toDbCommand.ExecuteNonQuery();
+                results = toDbCommand.Execute($"{SqlInsertCmd} INTO {destinationTableName} ({Columns}) VALUES({Values});");
                 Debug.Assert(results == 1, $"Failed to insert into table {destinationTableName} from table {sourceTableName}");
             }
             sourceReader.Close();
