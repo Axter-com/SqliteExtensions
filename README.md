@@ -25,4 +25,4 @@ CSharp SQLite extensions which works with System.Data.SQLite and Microsoft.Data.
 
 ## Usage
 - See comments in [SqliteExtensions.cs](https://github.com/David-Maisonave/SqliteExtensions/blob/main/SQLiteExtensions.cs) for usage examples and details.
-- System.Data.SQLite is used by default.  To use Microsoft.Data.Sqlite, define MICROSOFT_DATA_SQLITE.
+- **System.Data.SQLite** is used by default.  To use **Microsoft.Data.Sqlite**, define **MICROSOFT_DATA_SQLITE**.
