@@ -20,3 +20,5 @@ CSharp SQLite extensions which works with System.Data.SQLite and Microsoft.Data.
   - CopyTable
   - InsertTable
   - InsertOrReplaceTable
+  - DropTable
+  - DeleteFrom
